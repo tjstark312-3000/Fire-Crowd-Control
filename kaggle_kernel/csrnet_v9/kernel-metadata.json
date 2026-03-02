@@ -1,0 +1,13 @@
+{
+  "id": "tilakrajt/csrnet-tf-shanghaitech-v9-gpu-train",
+  "title": "CSRNet TF ShanghaiTech V9 GPU Train",
+  "code_file": "csrnet-tf-shanghaitech-v9.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [
+    "tthien/shanghaitech-with-people-density-map"
+  ]
+}

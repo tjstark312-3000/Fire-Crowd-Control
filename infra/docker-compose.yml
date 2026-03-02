@@ -1,0 +1,37 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ../backend
+    container_name: sfd-crowd-backend
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////app/db/sfd_crowd.db}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+    ports:
+      - '8000:8000'
+    volumes:
+      - sfd_backend_db:/app/db
+      - ../backend/data:/app/data
+      - ../backend/models:/app/models
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8000}
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-}
+    container_name: sfd-crowd-frontend
+    depends_on:
+      - backend
+    ports:
+      - '5173:80'
+    restart: unless-stopped
+
+volumes:
+  sfd_backend_db:

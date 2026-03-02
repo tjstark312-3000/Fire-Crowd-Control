@@ -1,0 +1,3 @@
+# Optional ONNX Runtime dependency for real model inference.
+# Install this only if you plan to run ONNXEngine.
+onnxruntime>=1.24.2

@@ -1,0 +1,5 @@
+backend/models/*.onnx filter=lfs diff=lfs merge=lfs -text
+backend/models/*.keras filter=lfs diff=lfs merge=lfs -text
+backend/models/*.h5 filter=lfs diff=lfs merge=lfs -text
+kaggle_outputs/csrnet_v9/csrnet_shanghaitechA_task1.keras filter=lfs diff=lfs merge=lfs -text
+kaggle_outputs/csrnet_v9/csrnet_shanghaitechA_task1.weights.h5 filter=lfs diff=lfs merge=lfs -text
