@@ -111,6 +111,10 @@ Key settings:
 - `HEATMAP_PNG_COMPRESSION`
 - per-camera `target_fps`
 
+Inference memory model:
+- Camera workers reuse a shared ONNX Runtime session.
+- This avoids loading one model copy per camera and prevents common OOM restart loops.
+
 Recommended first optimizations under load:
 1. Reduce `target_fps` on lower-priority cameras.
 2. Lower `HEATMAP_MAX_WIDTH` (for example from 640 to 512).

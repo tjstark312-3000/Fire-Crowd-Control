@@ -80,7 +80,23 @@ Checks:
 docker compose -f infra/docker-compose.yml logs backend --tail=200 | rg "camera_worker|camera_infer_error|offline"
 ```
 
-## 7) Frontend not receiving realtime updates
+## 7) Backend keeps restarting with `exitCode=137` / OOM
+Symptom:
+- Docker events show repeated `oom` and `die` with `exitCode=137`.
+
+Checks:
+```bash
+docker events --since 5m --until "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --filter container=sfd-crowd-backend | tail -n 50
+```
+
+Fixes:
+1. Ensure you are running the latest code where ONNX session is shared across workers.
+2. Reduce active cameras or lower camera `target_fps`.
+3. Lower heatmap payload settings (`HEATMAP_MAX_WIDTH`, compression tuning).
+4. Increase Docker Desktop memory allocation if needed.
+
+## 8) Frontend not receiving realtime updates
 Checks:
 1. Confirm backend websocket endpoint reachable:
 ```bash
@@ -90,7 +106,7 @@ curl -i http://localhost:8000/health
 3. Check browser console for websocket/subscription errors.
 4. Verify camera is enabled and producing events.
 
-## 8) Migration command works locally but not in container
+## 9) Migration command works locally but not in container
 Checks:
 1. Confirm `backend/alembic.ini` and `backend/alembic/` are copied in Dockerfile.
 2. Confirm container starts via `scripts/start_backend.sh`.

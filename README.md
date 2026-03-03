@@ -11,9 +11,10 @@ Production-grade crowd operations monorepo with real-time camera analytics, dens
 - Improved realtime heatmap pipeline for smooth updates under load:
   - Added bounded event queue between camera workers and DB/websocket writes.
   - Added temporal heatmap smoothing in ONNX and dummy engines.
-  - Added heatmap payload optimization with configurable max width and PNG compression.
-  - Added stale event filtering in frontend stream handling to prevent out-of-order jitter.
+- Added heatmap payload optimization with configurable max width and PNG compression.
+- Added stale event filtering in frontend stream handling to prevent out-of-order jitter.
 - Added ONNX Git LFS pointer detection with explicit error messaging.
+- Added shared ONNX runtime session reuse across camera workers to reduce memory and prevent per-camera model duplication.
 
 ## Stack
 - Frontend: React + Vite + TypeScript

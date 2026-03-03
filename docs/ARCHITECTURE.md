@@ -61,6 +61,9 @@ Schema is migration-managed by Alembic. Initial revision: `20260303_0001`.
 - Engine selection:
   - ONNX if model exists and is a real binary.
   - Dummy fallback if ONNX load fails.
+- ONNX memory behavior:
+  - backend reuses one shared ONNX Runtime session across camera workers.
+  - each worker still has isolated temporal smoothing state.
 - Robustness features:
   - Git LFS pointer detection with explicit log message.
   - Temporal smoothing for stable heatmaps.
@@ -70,6 +73,7 @@ Schema is migration-managed by Alembic. Initial revision: `20260303_0001`.
 ## Multi-Camera Scaling Considerations
 - One thread per camera worker.
 - One shared queue processor for DB writes + broadcast.
+- One shared ONNX session for all workers to avoid per-camera model duplication.
 - Bounded queue avoids unbounded memory growth under bursts.
 - Backpressure behavior drops oldest queued events first to preserve fresh realtime data.
 - Throughput tuning knobs:
