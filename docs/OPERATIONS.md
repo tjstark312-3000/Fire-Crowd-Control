@@ -109,6 +109,8 @@ Key settings:
 - `HEATMAP_TEMPORAL_SMOOTHING`
 - `HEATMAP_MAX_WIDTH`
 - `HEATMAP_PNG_COMPRESSION`
+- `ANALYTICS_EVENT_QUEUE_SIZE`
+- `FRAME_MAX_WIDTH`
 - per-camera `target_fps`
 
 Inference memory model:

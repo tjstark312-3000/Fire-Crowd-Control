@@ -32,6 +32,7 @@ Production-grade crowd operations monorepo with real-time camera analytics, dens
 - [Operations Runbook](docs/OPERATIONS.md)
 - [Deployment Guide](docs/DEPLOYMENT.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Go-Live Checklist](docs/GO_LIVE_CHECKLIST.md)
 
 ## Production Defaults
 - `DATABASE_URL` default: `postgresql+psycopg://postgres:postgres@localhost:5432/sfd_crowd`
@@ -113,6 +114,8 @@ OVERLAY_ALPHA=0.65
 HEATMAP_TEMPORAL_SMOOTHING=0.35
 HEATMAP_MAX_WIDTH=640
 HEATMAP_PNG_COMPRESSION=3
+ANALYTICS_EVENT_QUEUE_SIZE=128
+FRAME_MAX_WIDTH=640
 
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
@@ -137,6 +140,8 @@ SUPABASE_SERVICE_ROLE_KEY=
 - `HEATMAP_TEMPORAL_SMOOTHING` (0.0-0.95): reduces flicker between frames.
 - `HEATMAP_MAX_WIDTH`: caps overlay resolution to reduce payload size and render latency.
 - `HEATMAP_PNG_COMPRESSION` (0-9): tradeoff between CPU and payload size.
+- `ANALYTICS_EVENT_QUEUE_SIZE`: bounds queued realtime payloads to prevent memory spikes under multi-camera load.
+- `FRAME_MAX_WIDTH`: caps per-frame processing width before inference and websocket encoding.
 
 ## ONNX Model Requirement
 The ONNX model is tracked in Git LFS. If model loading fails or backend falls back to dummy engine, fetch LFS artifacts:

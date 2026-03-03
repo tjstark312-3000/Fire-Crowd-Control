@@ -94,7 +94,9 @@ Fixes:
 1. Ensure you are running the latest code where ONNX session is shared across workers.
 2. Reduce active cameras or lower camera `target_fps`.
 3. Lower heatmap payload settings (`HEATMAP_MAX_WIDTH`, compression tuning).
-4. Increase Docker Desktop memory allocation if needed.
+4. Lower `ANALYTICS_EVENT_QUEUE_SIZE` (for example `128` or `64`) to cap queued payload memory.
+5. Lower `FRAME_MAX_WIDTH` (for example `640` to `480`) to reduce per-camera inference/frame memory.
+6. Increase Docker Desktop memory allocation if needed.
 
 ## 8) Frontend not receiving realtime updates
 Checks:

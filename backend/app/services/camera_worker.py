@@ -24,6 +24,7 @@ class WorkerCameraConfig:
     name: str
     stream_url: str
     target_fps: float
+    frame_max_width: int
 
 
 class CameraWorker:
@@ -122,6 +123,15 @@ class CameraWorker:
             return ""
         return base64.b64encode(encoded.tobytes()).decode("ascii")
 
+    def _resize_frame_for_processing(self, frame: np.ndarray) -> np.ndarray:
+        height, width = frame.shape[:2]
+        max_width = max(1, int(self.config.frame_max_width))
+        if width <= max_width:
+            return frame
+        scale = max_width / float(width)
+        target_height = max(1, int(round(height * scale)))
+        return cv2.resize(frame, (max_width, target_height), interpolation=cv2.INTER_AREA)
+
     def _synthetic_frame(self, width: int = 1280, height: int = 720) -> np.ndarray:
         canvas = np.zeros((height, width, 3), dtype=np.uint8)
         now = time.time()
@@ -195,6 +205,8 @@ class CameraWorker:
                         message="Camera read failed",
                     )
                     break
+
+                frame = self._resize_frame_for_processing(frame)
 
                 try:
                     infer_started = time.monotonic()

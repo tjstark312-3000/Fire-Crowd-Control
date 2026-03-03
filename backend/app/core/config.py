@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     heatmap_temporal_smoothing: float = Field(default=0.35, ge=0.0, le=0.95)
     heatmap_max_width: int = Field(default=640, ge=160, le=3840)
     heatmap_png_compression: int = Field(default=3, ge=0, le=9)
+    analytics_event_queue_size: int = Field(default=128, ge=16, le=4096)
+    frame_max_width: int = Field(default=640, ge=160, le=3840)
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
 

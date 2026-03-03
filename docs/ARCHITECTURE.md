@@ -64,6 +64,8 @@ Schema is migration-managed by Alembic. Initial revision: `20260303_0001`.
 - ONNX memory behavior:
   - backend reuses one shared ONNX Runtime session across camera workers.
   - each worker still has isolated temporal smoothing state.
+- Worker frame sizing:
+  - frames are resized to `FRAME_MAX_WIDTH` before inference/encoding to cap runtime memory per camera.
 - Robustness features:
   - Git LFS pointer detection with explicit log message.
   - Temporal smoothing for stable heatmaps.

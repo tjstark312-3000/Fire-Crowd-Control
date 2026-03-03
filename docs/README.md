@@ -8,6 +8,7 @@ This folder is the source of truth for future contributors.
 3. [Operations Runbook](OPERATIONS.md)
 4. [Deployment Guide](DEPLOYMENT.md)
 5. [Troubleshooting](TROUBLESHOOTING.md)
+6. [Go-Live Checklist](GO_LIVE_CHECKLIST.md)
 
 ## Scope
 - Backend service behavior, schema, migrations, and inference runtime.

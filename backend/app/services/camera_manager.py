@@ -37,7 +37,7 @@ class CameraManager:
         self._latest_events: dict[str, dict[str, Any]] = {}
         self._last_alert_ts: dict[str, float] = {}
         self._lock = threading.Lock()
-        self._event_queue: queue.Queue[dict[str, Any]] = queue.Queue(maxsize=2048)
+        self._event_queue: queue.Queue[dict[str, Any]] = queue.Queue(maxsize=settings.analytics_event_queue_size)
         self._event_stop = threading.Event()
         self._event_thread = threading.Thread(
             target=self._process_event_queue,
@@ -127,6 +127,7 @@ class CameraManager:
                 name=camera.name,
                 stream_url=camera.stream_url,
                 target_fps=camera.target_fps,
+                frame_max_width=self.settings.frame_max_width,
             ),
             engine=create_engine(self.settings),
             sample_video_path=self.settings.sample_video_path,
