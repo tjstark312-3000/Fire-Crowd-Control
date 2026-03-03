@@ -1,177 +1,147 @@
 # Scottsdale Fire Department (SFD) - Crowd Ops
 
-Production-grade crowd operations monorepo with real-time camera analytics, density heatmap overlays, and mission-control UI.
+Real-time crowd analytics platform for multi-camera monitoring with heatmap overlays, alerting, and mission-control UI.
 
-## Recent Platform Updates
-- Switched to PostgreSQL-first persistence (SQLite is opt-in only via `ALLOW_SQLITE=true`).
-- Added Alembic migration scaffolding and initial production schema migration.
-- Added database connection pooling and startup schema validation.
-- Added DB-aware `/health` checks (`503` when DB is unavailable).
-- Added Docker Compose PostgreSQL service with health checks.
-- Improved realtime heatmap pipeline for smooth updates under load:
-  - Added bounded event queue between camera workers and DB/websocket writes.
-  - Added temporal heatmap smoothing in ONNX and dummy engines.
-- Added heatmap payload optimization with configurable max width and PNG compression.
-- Added stale event filtering in frontend stream handling to prevent out-of-order jitter.
-- Added ONNX Git LFS pointer detection with explicit error messaging.
-- Added shared ONNX runtime session reuse across camera workers to reduce memory and prevent per-camera model duplication.
+## Current Status (Handoff)
+As of March 3, 2026, this repo is at a production-ready baseline:
+- PostgreSQL-first architecture is active.
+- Alembic migrations are enabled and running.
+- ONNX inference is active in backend (with dummy fallback only if model missing).
+- Multi-camera pipeline is running with memory hardening in place.
+- Go-live checklist has been executed and marked PASS.
 
-## Stack
-- Frontend: React + Vite + TypeScript
-- UI: Tailwind + Radix primitives
-- Charts/Data: Recharts + TanStack Table
-- Backend: FastAPI + SQLAlchemy + OpenCV + ONNX Runtime (fallback DummyEngine)
-- Database: PostgreSQL (default), SQLite (dev fallback only)
-- Realtime: Supabase Realtime (`analytics_latest`) with automatic WebSocket fallback
-- Migrations: Alembic
+Go-live report:
+- [Go-Live Checklist](docs/GO_LIVE_CHECKLIST.md)
 
-## Documentation Index
+## Documentation Map
 - [Developer Documentation Index](docs/README.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [API Contract](docs/API.md)
 - [Operations Runbook](docs/OPERATIONS.md)
 - [Deployment Guide](docs/DEPLOYMENT.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
-- [Go-Live Checklist](docs/GO_LIVE_CHECKLIST.md)
 
-## Production Defaults
-- `DATABASE_URL` default: `postgresql+psycopg://postgres:postgres@localhost:5432/sfd_crowd`
-- `ALLOW_SQLITE` default: `false`
-- Startup fails fast if required DB tables are missing.
-- Backend health endpoint validates live DB connectivity.
+## Tech Stack
+- Frontend: React + Vite + TypeScript
+- Backend: FastAPI + SQLAlchemy + OpenCV + ONNX Runtime
+- Database: PostgreSQL (default), SQLite only if explicitly enabled
+- Realtime: Supabase Realtime (`analytics_latest`) with backend websocket fallback
+- Migrations: Alembic
 
-## Repository Structure
+## Repository Layout
 ```text
 .
 ├── README.md
-├── backend
-│   ├── .env.example
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── alembic.ini
+├── docs/
+├── backend/
+│   ├── app/
 │   ├── alembic/
 │   ├── scripts/
-│   │   ├── start_backend.sh
-│   │   └── init_supabase.sql
-│   └── app/
-├── frontend
-└── infra
+│   ├── .env.example
+│   └── Dockerfile
+├── frontend/
+└── infra/
     └── docker-compose.yml
 ```
 
-## Quick Start (Recommended: Docker)
+## Quick Start (Recommended)
+From repo root:
 ```bash
 docker compose -f infra/docker-compose.yml up --build
 ```
 
-Services:
+Endpoints:
 - Frontend: http://localhost:5173
 - Backend: http://localhost:8000
 - API docs: http://localhost:8000/docs
-- PostgreSQL: `localhost:5432`
+- Postgres: `localhost:5432`
 
-## Local Development
-### 1) Backend
+## First-Time Setup (Important)
+The ONNX model is tracked by Git LFS.
+
 ```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-cp .env.example .env
+git lfs install
+git lfs pull
 ```
 
-Run migrations:
+If this step is skipped, backend may log `engine_fallback` and use dummy inference.
+
+## Health and Verification Commands
+Run these after startup:
+
 ```bash
-alembic upgrade head
+# API + DB health
+curl -sS http://localhost:8000/health
+
+# Migration revision in running backend
+docker compose -f infra/docker-compose.yml exec -T backend alembic current
+
+# Inference engine status
+docker compose -f infra/docker-compose.yml logs backend --tail=200 | rg "engine_selected|engine_fallback"
+
+# Camera status summary
+curl -sS http://localhost:8000/api/cameras | jq '{total:length, online: map(select(.status=="online"))|length}'
 ```
 
-Start API:
+## Daily Workflow for Teammates
+### Build checks
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+backend/.venv/bin/python -m compileall backend/app backend/alembic
+cd frontend && npm run build
+cd .. && docker compose -f infra/docker-compose.yml config
 ```
 
-### 2) Frontend
+### Add test cameras
 ```bash
-cd frontend
-npm install
-npm run dev
+for i in 1 2 3; do
+  curl -sS -X POST http://localhost:8000/api/cameras \
+    -H 'Content-Type: application/json' \
+    -d "{\"name\":\"Sim Cam $i\",\"stream_url\":\"sim://sample\",\"enabled\":true,\"target_fps\":2,\"alert_threshold\":120}" >/dev/null
+done
 ```
 
-## Backend Environment (`backend/.env`)
+### Follow backend logs
+```bash
+docker compose -f infra/docker-compose.yml logs -f backend
+```
+
+## Key Environment Variables
+Backend defaults (`backend/.env.example`):
+
 ```bash
 CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173
 DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/sfd_crowd
 ALLOW_SQLITE=false
-DATABASE_ECHO=false
+
 DATABASE_POOL_SIZE=10
 DATABASE_MAX_OVERFLOW=20
 DATABASE_POOL_TIMEOUT=30
 DATABASE_POOL_RECYCLE=1800
 DATABASE_CONNECT_TIMEOUT=10
+
 DEFAULT_TARGET_FPS=2
 DEFAULT_ALERT_THRESHOLD=120
+
 OVERLAY_ALPHA=0.65
 HEATMAP_TEMPORAL_SMOOTHING=0.35
 HEATMAP_MAX_WIDTH=640
 HEATMAP_PNG_COMPRESSION=3
 ANALYTICS_EVENT_QUEUE_SIZE=128
 FRAME_MAX_WIDTH=640
-
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-## Database and Migrations
-- Canonical migration path: `alembic upgrade head`
-- Initial migration file: `backend/alembic/versions/20260303_0001_initial_schema.py`
-- Container startup script runs migrations automatically when Alembic CLI is available.
-- Restricted/offline fallback: startup uses schema bootstrap (`python -m app.db.bootstrap`).
+Performance/memory controls for multi-camera operation:
+- `ANALYTICS_EVENT_QUEUE_SIZE`: bounds queued payload memory.
+- `FRAME_MAX_WIDTH`: caps frame size before inference/encoding.
+- `HEATMAP_MAX_WIDTH`: caps overlay size.
 
-## Realtime Heatmap Pipeline
-- Per-camera workers run inference and emit analytics events.
-- Events are buffered through a bounded queue before DB writes and websocket broadcast.
-- Backend stores latest per-camera analytics in `analytics_latest`.
-- Frontend consumes Supabase `postgres_changes` when configured.
-- Frontend falls back to backend websocket stream when Supabase is unavailable.
-- Frontend drops stale/out-of-order camera events to keep overlays stable.
+## Database and Migration Policy
+- Canonical command: `alembic upgrade head`
+- Current base migration: `backend/alembic/versions/20260303_0001_initial_schema.py`
+- Container startup script attempts migration alignment automatically.
+- Schema changes must be migration-driven (no ad-hoc production `create_all`).
 
-## Heatmap Smoothness and Throughput Controls
-- `HEATMAP_TEMPORAL_SMOOTHING` (0.0-0.95): reduces flicker between frames.
-- `HEATMAP_MAX_WIDTH`: caps overlay resolution to reduce payload size and render latency.
-- `HEATMAP_PNG_COMPRESSION` (0-9): tradeoff between CPU and payload size.
-- `ANALYTICS_EVENT_QUEUE_SIZE`: bounds queued realtime payloads to prevent memory spikes under multi-camera load.
-- `FRAME_MAX_WIDTH`: caps per-frame processing width before inference and websocket encoding.
-
-## ONNX Model Requirement
-The ONNX model is tracked in Git LFS. If model loading fails or backend falls back to dummy engine, fetch LFS artifacts:
-
-```bash
-git lfs pull
-```
-
-Expected model path:
-- `backend/models/crowd_model_stride8.onnx`
-
-## Supabase Setup (Optional but Recommended for Hosted Realtime/Auth)
-1. Create a Supabase project.
-2. Run `backend/scripts/init_supabase.sql` in Supabase SQL Editor.
-3. Set backend env:
-```bash
-DATABASE_URL=postgresql+psycopg://<user>:<password>@<host>:5432/postgres
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_ANON_KEY=<anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-```
-4. Set frontend env:
-```bash
-VITE_API_BASE=http://localhost:8000
-VITE_SUPABASE_URL=https://<project-ref>.supabase.co
-VITE_SUPABASE_ANON_KEY=<anon-key>
-VITE_FORCE_MOCK=false
-```
-
-## API
+## API Surface
 - `GET /health`
 - `GET /api/cameras`
 - `POST /api/cameras`
@@ -180,48 +150,45 @@ VITE_FORCE_MOCK=false
 - `GET /api/cameras/{id}/latest`
 - `WS /ws/analytics`
 
-Event payload:
-```json
-{
-  "camera_id": "string",
-  "ts": "ISO8601",
-  "status": "online|offline|error",
-  "processed_fps": 2.4,
-  "latency_ms": 88.2,
-  "crowd_count": 123.5,
-  "density_overlay_png_base64": "...",
-  "frame_jpeg_base64": "...",
-  "message": "optional"
-}
-```
+For full request/response contract, use:
+- [API Contract](docs/API.md)
 
-## Validation Commands
-```bash
-# Backend static checks
-backend/.venv/bin/python -m compileall backend/app backend/alembic
+## Known Operational Notes
+- If Docker events show backend `oom` + `exitCode=137`, reduce:
+  - camera count or per-camera FPS
+  - `FRAME_MAX_WIDTH`
+  - `HEATMAP_MAX_WIDTH`
+  - `ANALYTICS_EVENT_QUEUE_SIZE`
+- If CORS parsing fails, ensure `CORS_ORIGINS` is comma-separated.
+- If migrations fail on legacy schema with missing `alembic_version`, use stamp flow in:
+  - [Troubleshooting](docs/TROUBLESHOOTING.md)
 
-# Frontend production build
-cd frontend && npm run build
+## Next Steps for the Team
+### Priority 1 (immediate)
+1. Add CI gates: lint, unit/integration tests, migration check, frontend build, Docker image build.
+2. Add automated soak/load test for N-camera scenarios and track restart/OOM behavior.
+3. Add metrics + dashboards (queue depth, inference latency, API latency, DB latency, websocket publish rate).
 
-# Compose configuration check
-cd infra && docker compose config
-```
+### Priority 2 (short-term)
+1. Add production alerts for:
+   - backend restarts
+   - OOM kills
+   - camera offline/error rates
+2. Add Postgres backup/restore job automation and recovery drill cadence.
+3. Add API auth hardening + role-based access controls for operators/admins.
 
-## Next Steps
-1. Pull real ONNX artifacts (`git lfs pull`) in all deploy environments.
-2. Enable CI pipeline stages: lint, tests, migration check, frontend build, image build.
-3. Add load testing for multi-camera realtime throughput and tune `HEATMAP_*` + DB pool settings.
-4. Add structured metrics and tracing (Prometheus/OpenTelemetry) for queue depth, inference latency, DB latency, websocket broadcast latency.
-5. Enforce migration-only schema changes in CI/CD (`alembic upgrade head` on deploy).
-6. Add backup/restore, retention, and disaster recovery runbooks for PostgreSQL.
+### Priority 3 (medium-term)
+1. Optimize frontend bundle size (code-splitting/manual chunk strategy).
+2. Add canary deployment workflow and rollback automation.
+3. Expand model lifecycle docs (versioning, rollback model, accuracy/perf baselines).
 
-## CSRNet Training + Mobile Handoff
-Train with:
+## CSRNet Training and Mobile Handoff
+Training command:
 ```bash
 python backend/scripts/train_csrnet.py --device cuda
 ```
 
-Outputs include:
+Primary artifacts:
 - `backend/models/checkpoints/csrnet_epoch_XXXX.pt`
 - `backend/models/checkpoints/csrnet_last.pt`
 - `backend/models/checkpoints/csrnet_best.pt`
